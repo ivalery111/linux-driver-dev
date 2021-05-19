@@ -45,14 +45,19 @@ static pcd_t pcd = {
 
 static int __init pcd_driver_init(void)
 {
+	int rc = (-1);
+
 	/*
 	 * 1. Dynamically allocate a device number
 	 */
-     /* TODO: error handling */
-	alloc_chrdev_region(&pcd.dev_number,
-                        PCD_MAJOR_NUM,
-                        PCD_MINOR_NUM,
-			            PCD_DEVICES_NAME);
+	rc = alloc_chrdev_region(&pcd.dev_number,
+                              PCD_MAJOR_NUM,
+                              PCD_MINOR_NUM,
+			                  PCD_DEVICES_NAME);
+	if (rc < 0) {
+		pr_err("Alloc chrdev failed!\n");
+		goto exit;
+	}
     pr_info("Device Number <major>:<minor> -> %d:%d\n",
                                         MAJOR(pcd.dev_number),
                                         MINOR(pcd.dev_number));
@@ -60,28 +65,49 @@ static int __init pcd_driver_init(void)
      * 2. Character Device Registration
      */
     /* 2.1 Initialize the cdev with file operations */
-    /* TODO: error handling */
     cdev_init(&pcd.cdev, &pcd.fops);
 
     /* 2.2 Register the device with VFS */
     pcd.cdev.owner = THIS_MODULE;
-    cdev_add(&pcd.cdev, pcd.dev_number, PCD_MINOR_NUM);
+    rc = cdev_add(&pcd.cdev, pcd.dev_number, PCD_MINOR_NUM);
+    if (rc < 0) {
+	    pr_err("Cdev add failed!\n");
+	    goto unreg_chrdev;
+    }
 
     /*
      * 3. Creating the device class under /sys/class/
      */
-    /* TODO: error handling */
     pcd.class = class_create(THIS_MODULE, PCD_CLASS_NAME);
+    if (IS_ERR(pcd.class)) {
+	    pr_err("Class creation failed!\n");
+	    rc = PTR_ERR(pcd.class);
+	    goto cdev_del;
+    }
 
     /*
      * 3.1 Populate the sysfs with device information
      */
-    /* TODO: error handling */
     pcd.device = device_create(pcd.class, NULL, pcd.dev_number, NULL, PCD_DEVICE_NAME);
+    if (IS_ERR(pcd.device)) {
+	    pr_err("Device creation failed!\n");
+	    rc = PTR_ERR(pcd.device);
+	    goto class_destroy;
+    }
 
     pr_info("Module init successful!\n");
 
     return 0;
+
+class_destroy:
+	class_destroy(pcd.class);
+cdev_del:
+	cdev_del(&pcd.cdev);
+unreg_chrdev:
+	unregister_chrdev_region(pcd.dev_number, PCD_MINOR_NUM);
+exit:
+	pr_err("Module insertion failed!\n");
+	return rc;
 }
 
 static void __exit pcd_driver_cleanup(void)

@@ -62,6 +62,7 @@ typedef struct pcd_s {
 	struct file_operations fops; /* File Operations */
 } pcd_t;
 
+static int pcd_init(pcd_t *pcd);
 int	pcd_open(struct inode *inode, struct file *file);
 int	pcd_release(struct inode *inode, struct file *file);
 ssize_t pcd_read(struct file *file, char __user *buff, size_t count, loff_t *f_pos);
@@ -69,6 +70,52 @@ ssize_t pcd_write(struct file *file, const char __user *buff, size_t count, loff
 loff_t 	pcd_lseek(struct file *file, loff_t offset, int whence);
 
 static int pcd_check_permission(int dev_perm, int access_mode);
+
+static int pcd_init(pcd_t *pcd){
+	if(pcd == NULL){
+		return (-1);
+	}
+
+	pcd->driver_data.total_devices = 			PCD_NUM_OF_DEVICES;
+	/*
+	 * Setting 1 device
+	 */
+	pcd->driver_data.devices[0].buffer = 		pcd->pcd_1_buffer;
+	pcd->driver_data.devices[0].size = 			MEM_SIZE_PCD_1;
+	pcd->driver_data.devices[0].serial_number = PCD_1_SERIAL_NUM;
+	pcd->driver_data.devices[0].perm =			PCD_PERM_RDONLY;
+	/*
+	 * Setting 2 device
+	 */
+	pcd->driver_data.devices[1].buffer = 		pcd->pcd_2_buffer;
+	pcd->driver_data.devices[1].size = 			MEM_SIZE_PCD_2;
+	pcd->driver_data.devices[1].serial_number = PCD_2_SERIAL_NUM;
+	pcd->driver_data.devices[1].perm =			PCD_PERM_WRONLY;
+	/*
+	 * Setting 3 device
+	 */
+	pcd->driver_data.devices[2].buffer = 		pcd->pcd_3_buffer;
+	pcd->driver_data.devices[2].size = 			MEM_SIZE_PCD_3;
+	pcd->driver_data.devices[2].serial_number = PCD_3_SERIAL_NUM;
+	pcd->driver_data.devices[2].perm =			PCD_PERM_RDWR;
+	/*
+	 * Setting 4 device
+	 */
+	pcd->driver_data.devices[3].buffer = 		pcd->pcd_4_buffer;
+	pcd->driver_data.devices[3].size = 			MEM_SIZE_PCD_4;
+	pcd->driver_data.devices[3].serial_number = PCD_4_SERIAL_NUM;
+	pcd->driver_data.devices[3].perm =			PCD_PERM_RDWR;
+	
+
+	pcd->fops.open = pcd_open;
+	pcd->fops.release = pcd_release;
+	pcd->fops.read = pcd_read;
+	pcd->fops.write = pcd_write;
+	pcd->fops.llseek = pcd_lseek;
+	pcd->fops.owner = THIS_MODULE;
+
+	return 0;
+}
 
 /*
  * Steps:

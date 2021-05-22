@@ -1,4 +1,5 @@
 #include <linux/cdev.h>   /* CDev definition */
+#include <linux/fs.h>     /* File Operations */
 
 /*
  * Device Private Data
@@ -40,3 +41,22 @@ struct driver_private_data {
 	int total_devices;
 	struct device_private_data devices[PCD_NUM_OF_DEVICES];
 };
+
+/*
+ * Device definition
+ */
+typedef struct pcd_s {
+#define MEM_SIZE_PCD_1 512
+#define MEM_SIZE_PCD_2 512
+#define MEM_SIZE_PCD_3 512
+#define MEM_SIZE_PCD_4 512
+	char pcd_1_buffer[MEM_SIZE_PCD_1];
+	char pcd_2_buffer[MEM_SIZE_PCD_2];
+	char pcd_3_buffer[MEM_SIZE_PCD_3];
+	char pcd_4_buffer[MEM_SIZE_PCD_4];
+
+	struct driver_private_data driver_data;
+	struct device_private_data device_data;
+
+	struct file_operations fops; /* File Operations */
+} pcd_t;

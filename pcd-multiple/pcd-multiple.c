@@ -66,6 +66,7 @@ int	pcd_open(struct inode *inode, struct file *file);
 int	pcd_release(struct inode *inode, struct file *file);
 ssize_t pcd_read(struct file *file, char __user *buff, size_t count, loff_t *f_pos);
 ssize_t pcd_write(struct file *file, const char __user *buff, size_t count, loff_t *f_pos);
+loff_t 	pcd_lseek(struct file *file, loff_t offset, int whence);
 
 static int pcd_check_permission(int dev_perm, int access_mode);
 
@@ -182,6 +183,56 @@ ssize_t pcd_write(struct file *file, const char __user *buff, size_t count,
 	pr_info("Update file position %lld\n", (*f_pos));
 
 	return count;
+}
+
+/*
+ * Whence can be {SEEK_SET, SEEK_CUR, SEEK_END}
+ *
+ * Steps:
+ * 1. Check 'count' against buffer_size
+ *   - if f_pos(current_file_pos) + 'count' > buffer_size --> 'count' = buffer_size - f_pos
+ * 2. Copy 'count' bytes from user's buffer to  pcd's buffer
+ * 3. Update f_pos (current_file_pos)
+ * 4. Return number of bytes successfully read or error code
+ */
+loff_t pcd_lseek(struct file *file, loff_t offset, int whence)
+{
+	pr_info("Request\n");
+	pr_info("Current file position %lld\n", (file->f_pos));
+
+	loff_t temp = (-1);
+	struct device_private_data *dev_priv_data = (struct device_private_data *)file->private_data;
+	int buffer_size = dev_priv_data->size;
+
+	switch (whence) {
+	case SEEK_SET:
+		if ((offset > buffer_size) || (offset < 0)) {
+			return -EINVAL;
+		}
+		file->f_pos = offset;
+		break;
+	case SEEK_CUR:
+		temp = file->f_pos + offset;
+		if ((temp > buffer_size) || (temp < 0)) {
+			return -EINVAL;
+		}
+		file->f_pos = temp;
+		break;
+	case SEEK_END:
+		temp = buffer_size + offset;
+		if ((temp > buffer_size) || (temp < 0)) {
+			return -EINVAL;
+		}
+		file->f_pos = temp;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	pr_info("Success\n");
+	pr_info("Update file position %lld\n", (file->f_pos));
+
+	return file->f_pos;
 }
 
 static int pcd_check_permission(int dev_perm, int access_mode){

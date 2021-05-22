@@ -1,5 +1,6 @@
 #include <linux/cdev.h>   /* CDev definition */
 #include <linux/fs.h>     /* File Operations */
+#include <linux/uaccess.h> /* copy_to/from_user */
 
 /*
  * Device Private Data
@@ -64,6 +65,7 @@ typedef struct pcd_s {
 int	pcd_open(struct inode *inode, struct file *file);
 int	pcd_release(struct inode *inode, struct file *file);
 ssize_t pcd_read(struct file *file, char __user *buff, size_t count, loff_t *f_pos);
+ssize_t pcd_write(struct file *file, const char __user *buff, size_t count, loff_t *f_pos);
 
 static int pcd_check_permission(int dev_perm, int access_mode);
 
@@ -138,6 +140,47 @@ ssize_t pcd_read(struct file *file, char __user *buff, size_t count,
 	pr_info("Update file position %lld\n", (*f_pos));
 
 	/* Step 4 */
+	return count;
+}
+
+/*
+ * Steps:
+ * 1. Check 'count' against buffer_size
+ *   - if f_pos(current_file_pos) + 'count' > buffer_size --> 'count' = buffer_size - f_pos
+ * 2. Copy 'count' bytes from user's buffer to  pcd's buffer
+ * 3. Update f_pos (current_file_pos)
+ * 4. Return number of bytes successfully read or error code
+ */
+ssize_t pcd_write(struct file *file, const char __user *buff, size_t count,
+		  loff_t *f_pos)
+{
+	pr_info("Request %zu bytes\n", count);
+	pr_info("Current file position %lld\n", (*f_pos));
+
+	struct device_private_data *dev_priv_data = (struct device_private_data *)file->private_data;
+	int buffer_size = dev_priv_data->size;
+
+	/* Step 1 */
+	if ((*f_pos + count) > buffer_size) {
+		count = buffer_size - (*f_pos);
+	}
+	if (!count) {
+        pr_info("There is no space on the device!\n");
+		return -ENOMEM;
+	}
+
+	/* Step 2 */
+	/* TODO: access to global variable should be serialized */
+	if (copy_from_user(dev_priv_data->buffer + (*f_pos), buff, count)) {
+		return -EFAULT;
+	}
+
+	/* Step 3 */
+	(*f_pos) += count;
+
+	pr_info("Successfully write %zu bytes\n", count);
+	pr_info("Update file position %lld\n", (*f_pos));
+
 	return count;
 }
 

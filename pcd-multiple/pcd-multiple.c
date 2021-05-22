@@ -20,3 +20,23 @@ struct device_private_data {
 
 	struct cdev cdev; /* Character device */
 };
+
+/*
+ * Driver Private Data
+ */
+struct driver_private_data {
+#define PCD_MAJOR_NUM 0
+#define PCD_MINOR_NUM 1
+#define PCD_DEVICES_NAME "pcd"
+	dev_t dev_number; /* Holds the device number */
+
+#define PCD_CLASS_NAME  "pcd_class"
+	struct class *class;
+
+#define PCD_DEVICE_NAME "pcd"
+	struct device *device;
+
+#define PCD_NUM_OF_DEVICES (4)
+	int total_devices;
+	struct device_private_data devices[PCD_NUM_OF_DEVICES];
+};

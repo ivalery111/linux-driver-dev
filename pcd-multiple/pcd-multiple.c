@@ -1,3 +1,4 @@
+#include <linux/module.h>
 #include <linux/cdev.h>   /* CDev definition */
 #include <linux/fs.h>     /* File Operations */
 #include <linux/uaccess.h> /* copy_to/from_user */
@@ -300,3 +301,90 @@ static int pcd_check_permission(int dev_perm, int access_mode){
 
 	return -EPERM;
 }
+
+static int __init pcd_driver_init(void)
+{
+	int i = 0;
+	int rc = (-1);
+
+	rc = pcd_init(&pcd);
+	if(rc == (-1)){
+		goto exit;
+	}
+
+	/*
+	 * Dynamically allocate a device number
+	 */
+	rc = alloc_chrdev_region(&pcd.driver_data.dev_number,
+                              PCD_MAJOR_NUM,
+                              PCD_NUM_OF_DEVICES,
+			                  PCD_DEVICES_NAME);
+	if (rc < 0) {
+		pr_err("Allocation of chrdev failed!\n");
+		goto exit;
+	}
+
+	/*
+	 * Creating the device class under /sys/class/
+	 */
+	pcd.driver_data.class = class_create(THIS_MODULE, PCD_CLASS_NAME);
+	if (IS_ERR(pcd.driver_data.class)) {
+		pr_err("Class creation failed!\n");
+		rc = PTR_ERR(pcd.driver_data.class);
+		goto unreg_chrdev;
+	}
+
+	for(i = 0; i < PCD_NUM_OF_DEVICES; ++i) {
+		pr_info("Device Number <major>:<minor> -> %d:%d\n",
+						MAJOR(pcd.driver_data.dev_number + i),
+						MINOR(pcd.driver_data.dev_number + i));
+		/*
+		 * Character Device Registration
+		 */
+		/*    Initialize the cdev with file operations */
+		cdev_init(&pcd.driver_data.devices[i].cdev, &pcd.fops);
+	
+		/*    Register the device with VFS */
+		pcd.driver_data.devices[i].cdev.owner = THIS_MODULE;
+		rc = cdev_add(&pcd.driver_data.devices[i].cdev, pcd.driver_data.dev_number + i, PCD_MINOR_NUM);
+		if (rc < 0) {
+			pr_err("Cdev add failed!\n");
+			goto cdev_del;
+		}
+	
+		/*
+		 * Populate the sysfs with device information
+		 */
+		pcd.driver_data.device = device_create(pcd.driver_data.class, NULL, pcd.driver_data.dev_number + i, NULL,"%s-%d",PCD_DEVICE_NAME,i);
+		if (IS_ERR(pcd.driver_data.device)) {
+			pr_err("Device creation failed!\n");
+			rc = PTR_ERR(pcd.driver_data.device);
+			goto class_del;
+		}
+	}
+
+	pr_info("Module init successful!\n");
+
+	return 0;
+
+cdev_del:
+class_del:
+	for (; i >= 0; i--) {
+		device_destroy(pcd.driver_data.class,
+			       	   pcd.driver_data.dev_number + i);
+		cdev_del(&pcd.driver_data.devices[i].cdev);
+	}
+	class_destroy(pcd.driver_data.class);
+
+unreg_chrdev:
+	unregister_chrdev_region(pcd.driver_data.dev_number, PCD_NUM_OF_DEVICES);
+exit:
+	pr_err("Module insertion failed!\n");
+	return rc;
+}
+
+module_init(pcd_driver_init);
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Valery Ivanov");
+MODULE_DESCRIPTION("A Pseudo Character Driver");

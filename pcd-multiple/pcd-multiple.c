@@ -60,3 +60,22 @@ typedef struct pcd_s {
 
 	struct file_operations fops; /* File Operations */
 } pcd_t;
+
+static int pcd_check_permission(int dev_perm, int access_mode);
+
+static int pcd_check_permission(int dev_perm, int access_mode){
+
+	if (dev_perm == (PCD_PERM_RDWR)) {
+		return 0;
+	}
+	if ((dev_perm == PCD_PERM_RDONLY) && (access_mode & FMODE_READ)
+	    && !(access_mode & FMODE_WRITE)) {
+		return 0;
+	}
+	if ((dev_perm == PCD_PERM_WRONLY) && (access_mode & FMODE_WRITE)
+	    && !(access_mode & FMODE_READ)) {
+		return 0;
+	}
+
+	return -EPERM;
+}

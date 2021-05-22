@@ -383,7 +383,23 @@ exit:
 	return rc;
 }
 
+static void __exit pcd_driver_cleanup(void)
+{
+	int i = 0;
+	for (i = 0; i < PCD_NUM_OF_DEVICES; i++) {
+		device_destroy(pcd.driver_data.class,
+			       	   pcd.driver_data.dev_number + i);
+		cdev_del(&pcd.driver_data.devices[i].cdev);
+	}
+	class_destroy(pcd.driver_data.class);
+
+	unregister_chrdev_region(pcd.driver_data.dev_number, PCD_NUM_OF_DEVICES);
+
+	pr_info("Module unloaded!\n");
+}
+
 module_init(pcd_driver_init);
+module_exit(pcd_driver_cleanup);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Valery Ivanov");

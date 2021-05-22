@@ -62,6 +62,7 @@ typedef struct pcd_s {
 } pcd_t;
 
 int	pcd_open(struct inode *inode, struct file *file);
+int	pcd_release(struct inode *inode, struct file *file);
 
 static int pcd_check_permission(int dev_perm, int access_mode);
 
@@ -92,6 +93,12 @@ int pcd_open(struct inode *inode, struct file *file)
 	(!rc) ? pr_info("Success\n") : pr_info("Unsuccess\n");
 
 	return rc;
+}
+
+int pcd_release(struct inode *inode, struct file *file)
+{
+	pr_info("Success\n");
+	return 0;
 }
 
 static int pcd_check_permission(int dev_perm, int access_mode){

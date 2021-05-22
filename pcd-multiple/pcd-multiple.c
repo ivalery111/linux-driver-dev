@@ -62,6 +62,8 @@ typedef struct pcd_s {
 	struct file_operations fops; /* File Operations */
 } pcd_t;
 
+static pcd_t pcd;
+
 static int pcd_init(pcd_t *pcd);
 int	pcd_open(struct inode *inode, struct file *file);
 int	pcd_release(struct inode *inode, struct file *file);

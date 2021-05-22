@@ -61,7 +61,38 @@ typedef struct pcd_s {
 	struct file_operations fops; /* File Operations */
 } pcd_t;
 
+int	pcd_open(struct inode *inode, struct file *file);
+
 static int pcd_check_permission(int dev_perm, int access_mode);
+
+/*
+ * Steps:
+ * 1. Find out on which device file open was attemped by the user-space
+ * 2. Get Device's private data
+ * 3. Check Permission
+ */
+int pcd_open(struct inode *inode, struct file *file)
+{
+	int rc = (-1);
+	int minor_num = 0;
+	struct device_private_data *dev_priv_data;
+
+	/* Find out to which device is userspace trying to get the access */
+	minor_num = MINOR(inode->i_rdev);
+	pr_info("minor number is %d\n", minor_num);
+
+	/* Get Device's private data */
+	dev_priv_data =
+		container_of(inode->i_cdev, struct device_private_data, cdev);
+
+	/* Supply device private data to other driver's methods */
+	file->private_data = dev_priv_data;
+
+	rc = pcd_check_permission(dev_priv_data->perm, file->f_mode);
+	(!rc) ? pr_info("Success\n") : pr_info("Unsuccess\n");
+
+	return rc;
+}
 
 static int pcd_check_permission(int dev_perm, int access_mode){
 

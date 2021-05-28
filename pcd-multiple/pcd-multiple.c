@@ -65,12 +65,12 @@ typedef struct pcd_s {
 
 static pcd_t pcd;
 
-static int pcd_init(pcd_t *pcd);
-int	pcd_open(struct inode *inode, struct file *file);
-int	pcd_release(struct inode *inode, struct file *file);
-ssize_t pcd_read(struct file *file, char __user *buff, size_t count, loff_t *f_pos);
-ssize_t pcd_write(struct file *file, const char __user *buff, size_t count, loff_t *f_pos);
-loff_t 	pcd_lseek(struct file *file, loff_t offset, int whence);
+static int 		pcd_init(pcd_t *pcd);
+static int		pcd_open(struct inode *inode, struct file *file);
+static int		pcd_release(struct inode *inode, struct file *file);
+static ssize_t 	pcd_read(struct file *file, char __user *buff, size_t count, loff_t *f_pos);
+static ssize_t 	pcd_write(struct file *file, const char __user *buff, size_t count, loff_t *f_pos);
+static loff_t 	pcd_lseek(struct file *file, loff_t offset, int whence);
 
 static int pcd_check_permission(int dev_perm, int access_mode);
 
